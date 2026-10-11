@@ -1,83 +1,80 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { registerUser, resendVerificationEmail } from '../../api/auth';
-
-const RESEND_DELAY_SECONDS = 60;
+import { useForm } from 'react-hook-form';
+import { registerUser, resendVerificationEmail, type RegisterPayload } from '../../api/auth';
+import { useLanguage } from '../../hooks/useLanguage';
 
 export const Register: React.FC = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [status, setStatus] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isVerificationStep, setIsVerificationStep] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const { t } = useLanguage();
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
 
-  useEffect(() => {
-    if (resendCooldown <= 0) {
-      return;
-    }
+  const {
+    register,
+    handleSubmit,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterPayload>();
 
-    const timer = window.setInterval(() => {
-      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [resendCooldown]);
-
-  const statusTone = status?.startsWith('Ошибка') ? 'error' : status ? 'success' : '';
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const startResendCooldown = () => {
-    setResendCooldown(RESEND_DELAY_SECONDS);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setStatus(null);
-
+  const onSubmit = async (data: RegisterPayload) => {
+    setServerError(null);
     try {
-      await registerUser(formData);
-      localStorage.setItem('pendingRegistration', JSON.stringify(formData));
-      setStatus('Письмо для подтверждения отправлено. Перейдите по ссылке в письме.');
-      setIsVerificationStep(true);
-      startResendCooldown();
+      await registerUser(data);
+      // Важно: больше никакого localStorage! Просто переключаем экран.
+      setIsSuccess(true);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Произошла ошибка при регистрации';
-      setStatus(`Ошибка: ${errorMsg}`);
-    } finally {
-      setLoading(false);
+      setServerError(error.response?.data?.message || t('Ошибка при регистрации'));
     }
   };
 
-  const handleResendEmail = async () => {
-    if (resendCooldown > 0) {
-      return;
-    }
+  const handleResend = async () => {
+    const email = getValues('email');
+    if (!email) return;
 
-    setLoading(true);
-    setStatus(null);
-
+    setResendLoading(true);
+    setResendStatus(null);
     try {
-      await resendVerificationEmail(formData.email);
-      startResendCooldown();
-      setStatus('Письмо для подтверждения отправлено повторно.');
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Не удалось отправить письмо повторно';
-      setStatus(`Ошибка: ${errorMsg}`);
+      await resendVerificationEmail(email);
+      setResendStatus('Письмо отправлено повторно. Проверьте почту.');
+    } catch (err: any) {
+      setResendStatus(err.response?.data?.message || 'Не удалось отправить письмо.');
     } finally {
-      setLoading(false);
+      setResendLoading(false);
     }
   };
 
+  // ЭКРАН 1: Успешная регистрация (просьба проверить почту)
+  if (isSuccess) {
+    return (
+      <section className="auth-layout">
+        <div className="auth-card" style={{ margin: 'auto', textAlign: 'center' }}>
+          <h2>{t('Подтвердите ваш Email')}</h2>
+          <p>{t('Мы отправили ссылку для активации аккаунта на ваш адрес.')}</p>
+          <p>{t('Перейдите по ссылке в письме, чтобы активировать аккаунт и войти в систему.')}</p>
+          
+          <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button
+              onClick={handleResend}
+              disabled={resendLoading}
+              className="secondary-button"
+            >
+              {resendLoading ? t('Отправка...') : t('Отправить письмо еще раз')}
+            </button>
+            {resendStatus && <div style={{ fontSize: 13, color: '#2b6cb0' }}>{resendStatus}</div>}
+
+            <Link to="/login" className="primary-button" style={{ textDecoration: 'none' }}>
+              {t('Перейти ко входу')}
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ЭКРАН 2: Форма регистрации
   return (
     <section className="auth-layout">
       <div className="auth-hero">
@@ -85,87 +82,53 @@ export const Register: React.FC = () => {
           <div className="brand-mark">TC</div>
           <span>TicketCraft</span>
         </div>
-
-        <p className="eyebrow">Платформа для событий</p>
-        <h1>Создайте аккаунт и управляйте билетами без лишних усилий.</h1>
-
-        <ul className="feature-list">
-          <li>Быстрая регистрация за 1 минуту</li>
-          <li>Умный контроль продаж и доступа</li>
-          <li>Поддержка командной работы</li>
-        </ul>
+        <p className="eyebrow">{t('Присоединяйтесь к нам')}</p>
+        <h1>{t('Создайте аккаунт для начала работы.')}</h1>
       </div>
 
       <div className="auth-card">
         <div className="card-header">
-          <p className="small-label">{isVerificationStep ? 'Почти готово' : 'Начать работу'}</p>
-          <h2>{isVerificationStep ? 'Проверьте почту' : 'Регистрация'}</h2>
+          <p className="small-label">{t('Регистрация')}</p>
+          <h2>{t('Создать аккаунт')}</h2>
         </div>
 
-        {isVerificationStep ? (
-          <div className="verification-panel">
-            <p className="verification-note">
-              Мы отправили письмо со ссылкой для подтверждения на <strong>{formData.email}</strong>.
-            </p>
+        <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
+          <label className="field">
+            <span>{t('Email')}</span>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              {...register('email', { required: t('Введите email') })}
+            />
+            {errors.email && <span style={{ color: '#e53e3e', fontSize: 13, marginTop: 4 }}>{errors.email.message}</span>}
+          </label>
 
-            <button
-              type="button"
-              className="secondary-button auth-link-button"
-              onClick={handleResendEmail}
-              disabled={resendCooldown > 0 || loading}
-            >
-              {resendCooldown > 0
-                ? `Отправить письмо повторно через ${resendCooldown}с`
-                : 'Отправить письмо повторно'}
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="auth-form">
-            <label className="field">
-              <span>Email</span>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-              />
-            </label>
+          <label className="field">
+            <span>{t('Пароль')}</span>
+            <input
+              type="password"
+              placeholder={t('Придумайте пароль')}
+              {...register('password', { required: t('Введите пароль') })}
+            />
+            {errors.password && <span style={{ color: '#e53e3e', fontSize: 13, marginTop: 4 }}>{errors.password.message}</span>}
+          </label>
 
-            <label className="field">
-              <span>Пароль</span>
-              <input
-                type="password"
-                name="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Минимум 8 символов"
-              />
-            </label>
+          <button type="submit" className="primary-button" disabled={isSubmitting}>
+            {isSubmitting ? t('Регистрация...') : t('Зарегистрироваться')}
+          </button>
+        </form>
 
-            <button type="submit" className="primary-button" disabled={loading}>
-              {loading ? 'Создаём аккаунт...' : 'Зарегистрироваться'}
-            </button>
-          </form>
-        )}
+        <div className="divider">
+          <span>{t('или')}</span>
+        </div>
 
-        {!isVerificationStep && (
-          <>
-            <div className="divider">
-              <span>или</span>
-            </div>
+        <Link to="/login" className="secondary-button auth-link-button">
+          {t('Уже есть аккаунт? Войти')}
+        </Link>
 
-            <Link to="/login" className="secondary-button auth-link-button">
-              Войти в аккаунт
-            </Link>
-          </>
-        )}
-
-        {status && (
-          <p className={`form-status ${statusTone}`} aria-live="polite">
-            {status}
+        {serverError && (
+          <p className="form-status error" aria-live="polite">
+            {serverError}
           </p>
         )}
       </div>

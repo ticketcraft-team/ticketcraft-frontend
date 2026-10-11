@@ -38,13 +38,15 @@ export const getMyProfile = async (): Promise<UserProfileResponse> => {
 
 // Получение активных билетов
 export const getMyActiveTickets = async (): Promise<any[]> => {
-  const response = await apiClient.get<any[]>('/api/v1/users/me/tickets/active');
-  return response.data;
+  const response = await apiClient.get('/api/v1/users/me/tickets/active');
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  return response.data?.content || [];
 };
 
 // Получение истории заказов
-export const getMyOrders = async (params?: GetOrdersParams): Promise<any> => {
-  // Список всех возможных статусов по умолчанию
+export const getMyOrders = async (params?: GetOrdersParams): Promise<any[]> => {
   const allStatuses: OrderStatus[] = [
     'CREATED',
     'PENDING_PAYMENT',
@@ -65,11 +67,35 @@ export const getMyOrders = async (params?: GetOrdersParams): Promise<any> => {
       statuses: params?.statuses && params.statuses.length > 0 ? params.statuses : allStatuses,
       sort: params?.sort,
     },
-    // Важно: сериализация массива query-параметров в виде ?statuses=A&statuses=B
     paramsSerializer: {
       indexes: null,
     },
   });
 
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  return response.data?.content || [];
+};
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
+// Изменение пароля (POST /api/v1/users/me/change-password)
+export const changePassword = async (data: ChangePasswordPayload): Promise<void> => {
+  await apiClient.post('/api/v1/users/me/change-password', data);
+};
+
+export interface UpdateProfilePayload {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+}
+
+// Обновление данных профиля (PATCH /api/v1/users/me)
+export const updateMyProfile = async (data: UpdateProfilePayload): Promise<UserProfileResponse> => {
+  const response = await apiClient.patch<UserProfileResponse>('/api/v1/users/me', data);
   return response.data;
 };
