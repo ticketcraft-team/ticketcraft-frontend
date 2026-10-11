@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPublicEventById, type EventDetails } from '../../api/events';
+import { getPublicEventById, getEventSessions, type EventDetails } from '../../api/events';
 import { useLanguage } from '../../hooks/useLanguage';
-// Импортируйте функцию получения сессий для ивента (например, getEventSessions)
 
 export const EventDetailPage: React.FC = () => {
   const { t, language } = useLanguage();
@@ -18,8 +17,7 @@ export const EventDetailPage: React.FC = () => {
 
     Promise.all([
       getPublicEventById(id),
-      // Замените на вызов вашего API для сессий:
-      fetch(`/api/v1/sessions?eventId=${id}`).then((r) => r.json())
+      getEventSessions(id), // <--- Используем apiClient вместо сырого fetch
     ])
       .then(([eventData, sessionsData]) => {
         setEvent(eventData);

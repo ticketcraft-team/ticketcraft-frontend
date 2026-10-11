@@ -78,3 +78,10 @@ export const getPublicEventById = async (id: string | number): Promise<PublicEve
   const response = await apiClient.get<PublicEvent>(`/api/v1/events/${id}`);
   return response.data;
 };
+
+export const getEventSessions = async (eventId: string | number) => {
+  const response = await apiClient.get(`/api/v1/sessions`, {
+    params: { eventId },
+  });
+  return response.data;
+};
