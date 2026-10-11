@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { verifyEmail } from '../../api/auth';
+import { useLanguage } from '../../hooks/useLanguage';
 
 export const VerifyEmail: React.FC = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -28,10 +30,10 @@ export const VerifyEmail: React.FC = () => {
         setError(
           err.response?.data?.message ||
           err.message ||
-          'Ссылка недействительна или срок её действия истёк.'
+          t('Ссылка недействительна или срок её действия истёк.')
         );
       });
-  }, [navigate]);
+  }, [navigate, t]);
 
   return (
     <div className="verification-redirect" role="status" aria-live="polite" style={{ textAlign: 'center', marginTop: 60 }}>
@@ -42,19 +44,19 @@ export const VerifyEmail: React.FC = () => {
             onClick={() => navigate('/login')}
             style={{ padding: '8px 16px', cursor: 'pointer', marginTop: 12 }}
           >
-            Перейти ко входу
+            {t('Перейти ко входу')}
           </button>
         </div>
       )}
 
       {!error && !success && (
-        <p>Подтверждаем почту...</p>
+        <p>{t('Подтверждаем почту...')}</p>
       )}
 
       {success && (
         <div style={{ color: '#38a169' }}>
-          <h3>Почта успешно подтверждена!</h3>
-          <p>Сейчас вы будете перенаправлены на страницу входа...</p>
+          <h3>{t('Почта успешно подтверждена!')}</h3>
+          <p>{t('Сейчас вы будете перенаправлены на страницу входа...')}</p>
         </div>
       )}
     </div>

@@ -51,3 +51,13 @@ lerna-debug.log*
 .Trashes
 Thumbs.db
 ehthumbs.db
+n-local.yml
+.env
+*.env
+
+### Дополнительные секреты и локальные оверлеи
+.env.*
+!.env.example
+application-local.properties
+compose.override.yaml
+docker-compose.override.yml
