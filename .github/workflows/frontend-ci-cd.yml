@@ -88,18 +88,17 @@ jobs:
 
       # Доставка на VPS через SSH
       - name: Deploy to VPS via SSH
-        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
-          port: ${{ secrets.PORT }}
+          port: ${{ secrets.PORT || 22 }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             IMAGE_NAME="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
             
             # Авторизуем сервер в GHCR для скачивания приватного образа
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             
             # Скачиваем свежий образ
             docker pull $IMAGE_NAME
