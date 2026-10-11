@@ -87,19 +87,23 @@ jobs:
             VITE_API_URL=https://api.ticketcraft.app
 
       # Доставка на VPS через SSH
+
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           port: ${{ secrets.PORT || 22 }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}   # <--- ВОТ ЭТА СТРОКА
+          envs: GITHUB_TOKEN
           script: |
             IMAGE_NAME="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
             
-            # Авторизуем сервер в GHCR для скачивания приватного образа
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            # Авторизуем сервер в GHCR через переданный токен
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             
             # Скачиваем свежий образ
             docker pull $IMAGE_NAME
