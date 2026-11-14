@@ -389,7 +389,7 @@ export const AdminAnalytics: React.FC = () => {
                           {badge.label}
                         </span>
                         <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-                          Доля: <strong style={{ color: '#f8fafc' }}>{share.toFixed(1)}%</strong>
+                          {t('Доля:')} <strong style={{ color: '#f8fafc' }}>{share.toFixed(1)}%</strong>
                         </span>
                       </div>
 
@@ -401,13 +401,13 @@ export const AdminAnalytics: React.FC = () => {
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#cbd5e1' }}>
-                        <span>Продано мест:</span>
+                        <span>{t('Продано мест:')}</span>
                         <strong>{sold} / {offered}</strong>
                       </div>
 
                       <div style={{ marginTop: '4px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>
-                          <span>Заполняемость</span>
+                          <span>{t('Заполняемость')}</span>
                           <span>{occupancy.toFixed(1)}%</span>
                         </div>
                         <div style={{ height: '6px', background: '#1e293b', borderRadius: '3px', overflow: 'hidden' }}>
