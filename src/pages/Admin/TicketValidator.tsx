@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { apiClient } from '../../api/client';
+import { useLanguage } from '../../hooks/useLanguage';
 
 interface ValidateResponse {
   ticketCode: string;
@@ -8,6 +10,7 @@ interface ValidateResponse {
 }
 
 export const TicketValidator: React.FC = () => {
+  const { t, language } = useLanguage();
   const [ticketCodeInput, setTicketCodeInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [validationData, setValidationData] = useState<ValidateResponse | null>(null);
@@ -29,11 +32,12 @@ export const TicketValidator: React.FC = () => {
 
       setValidationData(response.data);
       setTicketCodeInput('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Ошибка гашения билета:', err);
-      setErrorMessage(
-        err.response?.data?.message || 'Билет не найден, не оплачен или уже был использован'
-      );
+      const serverMessage = axios.isAxiosError<{ message?: string }>(err)
+        ? err.response?.data?.message
+        : undefined;
+      setErrorMessage(language === 'en' ? t('Не удалось проверить билет') : serverMessage || t('Билет не найден, не оплачен или уже был использован'));
     } finally {
       setLoading(false);
     }
@@ -53,17 +57,17 @@ export const TicketValidator: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
           <span style={{ fontSize: '26px' }}>🎟️</span>
           <h2 style={{ fontSize: '22px', fontWeight: 800, margin: 0 }}>
-            Контроль билетов
+            {t('Контроль билетов')}
           </h2>
         </div>
         <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '24px' }}>
-          Вставьте код билета для проверки и фиксации прохода посетителя.
+          {t('Вставьте код билета для проверки и фиксации прохода посетителя.')}
         </p>
 
         <form onSubmit={handleValidate} style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
           <input
             type="text"
-            placeholder="Например: cba8de4d-aeae-4c72-..."
+            placeholder="e.g. cba8de4d-aeae-4c72-..."
             value={ticketCodeInput}
             onChange={(e) => setTicketCodeInput(e.target.value)}
             autoFocus
@@ -92,7 +96,7 @@ export const TicketValidator: React.FC = () => {
               opacity: loading || !ticketCodeInput.trim() ? 0.6 : 1,
             }}
           >
-            {loading ? 'Проверка...' : 'Погасить'}
+            {loading ? t('Проверка...') : t('Погасить')}
           </button>
         </form>
 
@@ -130,16 +134,16 @@ export const TicketValidator: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <span style={{ fontSize: '20px' }}>✓</span>
               <strong style={{ fontSize: '16px', color: '#34d399' }}>
-                {validationData.message || 'Проход разрешён'}
+                {t('Проход разрешён')}
               </strong>
             </div>
 
             <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6' }}>
-              <div>Код билета: <code style={{ color: '#f8fafc' }}>{validationData.ticketCode}</code></div>
+              <div>{t('Код билета:')} <code style={{ color: '#f8fafc' }}>{validationData.ticketCode}</code></div>
               <div>
-                Время отметки:{' '}
+                {t('Время отметки:')}{' '}
                 <strong>
-                  {new Date(validationData.checkedInAt).toLocaleString('ru-RU')}
+                  {new Date(validationData.checkedInAt).toLocaleString(language === 'en' ? 'en-US' : 'ru-RU')}
                 </strong>
               </div>
             </div>

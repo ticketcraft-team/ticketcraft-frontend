@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   getSessionSeats,
@@ -9,6 +10,7 @@ import {
 } from '../../api/booking';
 import { initiatePayment } from '../../api/payment';
 import { useLanguage } from '../../hooks/useLanguage';
+import { EventHeader } from '../Events/EventHeader';
 
 export const BookingPage: React.FC = () => {
   const { t, language } = useLanguage();
@@ -83,73 +85,12 @@ export const BookingPage: React.FC = () => {
     });
   };
 
-  const getSeatStyles = (seat: Seat, isSelected: boolean, isOccupied: boolean): React.CSSProperties => {
-    const base: React.CSSProperties = {
-      width: '38px',
-      height: '38px',
-      borderRadius: '10px 10px 6px 6px',
-      fontSize: '11px',
-      fontWeight: 700,
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-      outline: 'none',
-      userSelect: 'none',
-    };
-
-    if (isOccupied) {
-      return {
-        ...base,
-        background: '#1e293b',
-        border: '1px solid #334155',
-        color: '#475569',
-        cursor: 'not-allowed',
-        opacity: 0.35,
-      };
-    }
-
-    if (isSelected) {
-      return {
-        ...base,
-        background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
-        border: '1.5px solid #a5b4fc',
-        color: '#ffffff',
-        cursor: 'pointer',
-        boxShadow: '0 0 16px rgba(99, 102, 241, 0.75)',
-        transform: 'scale(1.08)',
-      };
-    }
-
-    if (seat.seatType === 'VIP') {
-      return {
-        ...base,
-        background: 'rgba(245, 158, 11, 0.12)',
-        border: '1.5px solid rgba(245, 158, 11, 0.6)',
-        color: '#fbbf24',
-        cursor: 'pointer',
-        boxShadow: '0 0 8px rgba(245, 158, 11, 0.15)',
-      };
-    }
-
-    if ((seat.seatType as string) === 'LOVE_SEAT') {
-      return {
-        ...base,
-        background: 'rgba(244, 63, 94, 0.12)',
-        border: '1.5px solid rgba(244, 63, 94, 0.6)',
-        color: '#fb7185',
-        cursor: 'pointer',
-        boxShadow: '0 0 8px rgba(244, 63, 94, 0.15)',
-      };
-    }
-
-    return {
-      ...base,
-      background: '#1e293b',
-      border: '1.5px solid #475569',
-      color: '#cbd5e1',
-      cursor: 'pointer',
-    };
+  const getSeatClassName = (seat: Seat, isSelected: boolean) => {
+    if (seat.status !== 'AVAILABLE') return 'booking-seat booking-seat-occupied';
+    if (isSelected) return 'booking-seat booking-seat-selected';
+    if (seat.seatType === 'VIP') return 'booking-seat booking-seat-vip';
+    if ((seat.seatType as string) === 'LOVE_SEAT') return 'booking-seat booking-seat-love';
+    return 'booking-seat';
   };
 
   const handleBooking = async () => {
@@ -180,9 +121,12 @@ export const BookingPage: React.FC = () => {
 
       alert(`${t('Заказ')} #${orderRes.orderId} ${t('успешно создан!')}`);
       navigate('/profile');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Ошибка бронирования/оплаты:', err);
-      alert(err.response?.data?.message || t('Произошла ошибка при оформлении заказа и переходе к оплате'));
+      const message = axios.isAxiosError<{ message?: string }>(err)
+        ? err.response?.data?.message
+        : undefined;
+      alert(message || t('Произошла ошибка при оформлении заказа и переходе к оплате'));
     } finally {
       setSubmitting(false);
     }
@@ -190,180 +134,65 @@ export const BookingPage: React.FC = () => {
 
   if (error) {
     return (
-      <div style={{ padding: '64px', textAlign: 'center', color: '#f87171', background: '#020617', minHeight: '100vh' }}>
-        {error}
-      </div>
+      <main className="booking-page">
+        <EventHeader />
+        <div className="booking-state booking-state-error">{error}</div>
+      </main>
     );
   }
 
   if (!layout) {
     return (
-      <div style={{ padding: '64px', textAlign: 'center', color: '#94a3b8', background: '#020617', minHeight: '100vh' }}>
-        {t('Загрузка схемы зала...')}
-      </div>
+      <main className="booking-page">
+        <EventHeader />
+        <div className="booking-state">
+          <span className="booking-loading-spinner" aria-hidden="true" />
+          <p>{t('Загрузка схемы зала...')}</p>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'radial-gradient(ellipse at 50% 0%, #0f172a 0%, #020617 75%, #000000 100%)',
-        color: '#f8fafc',
-        padding: '36px 20px 80px',
-        boxSizing: 'border-box',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      }}
-    >
-      <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
-        {/* Шапка события */}
-        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-          <span
-            style={{
-              fontSize: '11px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.25em',
-              color: '#818cf8',
-              fontWeight: 700,
-            }}
-          >
-            TicketCraft • {t('Бронирование')}
-          </span>
-          <h1
-            style={{
-              fontSize: '32px',
-              fontWeight: 900,
-              margin: '10px 0 6px',
-              letterSpacing: '-0.02em',
-              color: '#ffffff',
-            }}
-          >
-            {layout.eventName}
-          </h1>
-          <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-            {t('Сеанс')} #{layout.sessionId} · {t('Зал')} #{layout.hallId}
-          </p>
-        </div>
+    <main className="booking-page">
+      <EventHeader />
+      <div className="booking-container">
+        <header className="booking-header">
+          <p className="booking-eyebrow">TicketCraft <span>·</span> {t('Бронирование')}</p>
+          <h1>{layout.eventName}</h1>
+          <p className="booking-session-meta">{t('Сеанс')} #{layout.sessionId} <span>·</span> {t('Зал')} #{layout.hallId}</p>
+        </header>
 
-        {/* Основная сетка: Зал слева, Итог справа */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-            gap: '32px',
-            alignItems: 'start',
-          }}
-        >
-          {/* Секция зала */}
-          <section
-            style={{
-              background: '#0a0f1d',
-              border: '1px solid #1e293b',
-              borderRadius: '24px',
-              padding: '28px',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}
-          >
-            {/* Верхняя строка схемы и легенды */}
-            <div
-              style={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '16px',
-                marginBottom: '32px',
-              }}
-            >
+        <div className="booking-layout">
+          <section className="booking-hall-panel" aria-labelledby="booking-seats-title">
+            <div className="booking-panel-heading">
               <div>
-                <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#64748b', fontWeight: 700 }}>
-                  {t('Схема зала')}
-                </span>
-                <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '4px 0 0', color: '#ffffff' }}>
-                  {t('Выберите места')}
-                </h2>
+                <p className="booking-section-label">{t('Схема зала')}</p>
+                <h2 id="booking-seats-title">{t('Выберите места')}</h2>
               </div>
-
-              {/* Легенда */}
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '12px',
-                  background: '#020617',
-                  border: '1px solid #1e293b',
-                  borderRadius: '999px',
-                  padding: '6px 14px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#cbd5e1' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#1e293b', border: '1px solid #475569' }} />
-                  <span>{t('Свободно')}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#cbd5e1' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#6366f1', boxShadow: '0 0 6px #6366f1' }} />
-                  <span>{t('Выбрано')}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#fbbf24' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: 'rgba(245, 158, 11, 0.3)', border: '1px solid #f59e0b' }} />
-                  <span>VIP</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#1e293b' }} />
-                  <span>{t('Занято')}</span>
-                </div>
+              <div className="booking-legend" aria-label={t('Обозначения мест')}>
+                <span><i className="booking-legend-seat booking-legend-available" />{t('Свободно')}</span>
+                <span><i className="booking-legend-seat booking-legend-selected" />{t('Выбрано')}</span>
+                <span><i className="booking-legend-seat booking-legend-vip" />VIP</span>
+                <span><i className="booking-legend-seat booking-legend-occupied" />{t('Занято')}</span>
               </div>
             </div>
 
-            {/* Изогнутый неоновый экран */}
-            <div style={{ width: '100%', maxWidth: '580px', marginBottom: '44px', textAlign: 'center' }}>
-              <div
-                style={{
-                  height: '6px',
-                  width: '100%',
-                  background: 'linear-gradient(90deg, transparent 0%, #6366f1 50%, transparent 100%)',
-                  borderRadius: '50%',
-                  boxShadow: '0 0 24px 6px rgba(99, 102, 241, 0.55)',
-                }}
-              />
-              <div
-                style={{
-                  height: '34px',
-                  background: 'linear-gradient(180deg, rgba(99, 102, 241, 0.12) 0%, transparent 100%)',
-                  clipPath: 'polygon(6% 0%, 94% 0%, 100% 100%, 0% 100%)',
-                }}
-              />
-              <p
-                style={{
-                  fontSize: '10px',
-                  letterSpacing: '0.35em',
-                  color: '#64748b',
-                  textTransform: 'uppercase',
-                  fontWeight: 800,
-                  marginTop: '-10px',
-                }}
-              >
-                {t('ЭКРАН')}
-              </p>
+            <div className="booking-screen">
+              <div className="booking-screen-glow" />
+              <div className="booking-screen-surface" />
+              <p>{t('ЭКРАН')}</p>
             </div>
 
-            {/* Сетка рядов */}
-            <div style={{ width: '100%', overflowX: 'auto', paddingBottom: '12px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', minWidth: 'max-content', margin: '0 auto' }}>
+            <div className="booking-seat-scroll">
+              <div className="booking-seat-map">
                 {Object.entries(rows).map(([rowNum, rowSeats]) => (
-                  <div key={rowNum} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ width: '24px', fontSize: '12px', fontWeight: 800, color: '#64748b', textAlign: 'right', userSelect: 'none' }}>
-                      {rowNum}
-                    </span>
-
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                  <div key={rowNum} className="booking-seat-row">
+                    <span className="booking-row-number">{rowNum}</span>
+                    <div className="booking-seat-group">
                       {rowSeats.map((seat) => {
                         const isSelected = selectedSeatIds.has(seat.sessionSeatId);
                         const isOccupied = seat.status !== 'AVAILABLE';
-                        const style = getSeatStyles(seat, isSelected, isOccupied);
 
                         return (
                           <button
@@ -371,132 +200,50 @@ export const BookingPage: React.FC = () => {
                             type="button"
                             disabled={isOccupied}
                             onClick={() => toggleSeat(seat)}
-                            title={`${t('Ряд')} ${seat.rowNumber}, ${t('Место')} ${seat.seatNumber} ($${seat.price})`}
-                            style={style}
-                            onMouseEnter={(e) => {
-                              if (!isOccupied && !isSelected) {
-                                e.currentTarget.style.transform = 'scale(1.12)';
-                                e.currentTarget.style.borderColor = '#818cf8';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isOccupied && !isSelected) {
-                                e.currentTarget.style.transform = 'scale(1)';
-                                e.currentTarget.style.borderColor =
-                                  seat.seatType === 'VIP' ? 'rgba(245, 158, 11, 0.6)' : '#475569';
-                              }
-                            }}
+                            title={`${t('Ряд')} ${seat.rowNumber}, ${t('Место')} ${seat.seatNumber} (${formatPrice(seat.price)})`}
+                            aria-pressed={isSelected}
+                            aria-label={`${t('Ряд')} ${seat.rowNumber}, ${t('Место')} ${seat.seatNumber}`}
+                            className={getSeatClassName(seat, isSelected)}
                           >
                             {seat.seatNumber}
                           </button>
                         );
                       })}
                     </div>
-
-                    <span style={{ width: '24px', fontSize: '12px', fontWeight: 800, color: '#64748b', textAlign: 'left', userSelect: 'none' }}>
-                      {rowNum}
-                    </span>
+                    <span className="booking-row-number">{rowNum}</span>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Боковая карточка заказа */}
-          <aside
-            style={{
-              background: '#0a0f1d',
-              border: '1px solid #1e293b',
-              borderRadius: '24px',
-              padding: '28px',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
-              position: 'sticky',
-              top: '24px',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <aside className="booking-summary">
+            <div className="booking-summary-heading">
               <div>
-                <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#64748b', fontWeight: 700 }}>
-                  {t('Итог')}
-                </span>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '2px 0 0', color: '#ffffff' }}>
-                  {t('Ваш выбор')}
-                </h3>
+                <p className="booking-section-label">{t('Итог')}</p>
+                <h2>{t('Ваш выбор')}</h2>
               </div>
-              <div
-                style={{
-                  background: 'rgba(99, 102, 241, 0.15)',
-                  border: '1px solid rgba(99, 102, 241, 0.3)',
-                  padding: '4px 12px',
-                  borderRadius: '999px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: '#a5b4fc',
-                }}
-              >
-                {selectedSeatIds.size} {t('мест')}
-              </div>
+              <span className="booking-seat-count">{selectedSeatIds.size} {t('мест')}</span>
             </div>
 
-            {/* Список выбранных мест */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '300px', overflowY: 'auto', marginBottom: '24px' }}>
+            <div className="booking-selected-list">
               {selectedSeats.length === 0 ? (
-                <div
-                  style={{
-                    padding: '28px 16px',
-                    textAlign: 'center',
-                    border: '1px dashed #334155',
-                    borderRadius: '16px',
-                    color: '#64748b',
-                    fontSize: '13px',
-                    background: '#020617',
-                  }}
-                >
+                <div className="booking-empty-selection">
                   {t('Пока ничего не выбрано. Нажмите на свободные места в схеме.')}
                 </div>
               ) : (
                 selectedSeats.map((seat) => (
-                  <div
-                    key={seat.sessionSeatId}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      background: '#0f172a',
-                      border: '1px solid #1e293b',
-                      borderRadius: '14px',
-                      padding: '12px 14px',
-                    }}
-                  >
+                  <div key={seat.sessionSeatId} className="booking-selected-seat">
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>
-                        {t('Ряд')} {seat.rowNumber}, {t('Место')} {seat.seatNumber}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                        {seat.seatType === 'VIP' ? 'VIP' : t('Стандарт')}
-                      </div>
+                      <strong>{t('Ряд')} {seat.rowNumber}, {t('Место')} {seat.seatNumber}</strong>
+                      <span>{seat.seatType === 'VIP' ? 'VIP' : t('Стандарт')}</span>
                     </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '15px', fontWeight: 800, color: '#34d399' }}>
-                        ${formatPrice(seat.price)}
-                      </span>
+                    <div className="booking-selected-price">
+                      <strong>${formatPrice(seat.price)}</strong>
                       <button
                         type="button"
                         onClick={() => removeSeat(seat.sessionSeatId)}
-                        style={{
-                          width: '26px',
-                          height: '26px',
-                          borderRadius: '50%',
-                          background: '#1e293b',
-                          border: '1px solid #334155',
-                          color: '#94a3b8',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '14px',
-                        }}
+                        aria-label={`${t('Удалить')} ${t('Ряд')} ${seat.rowNumber}, ${t('Место')} ${seat.seatNumber}`}
                       >
                         ×
                       </button>
@@ -506,55 +253,25 @@ export const BookingPage: React.FC = () => {
               )}
             </div>
 
-            {/* Итоговая сумма */}
-            <div
-              style={{
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(15, 23, 42, 0.6) 100%)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
-                borderRadius: '16px',
-                padding: '16px 20px',
-                marginBottom: '20px',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
+            <div className="booking-total">
+              <div>
                 <span>{t('К оплате')}</span>
-                <span>{selectedSeatIds.size} шт.</span>
+                <span>{selectedSeatIds.size} {t('мест')}</span>
               </div>
-              <div style={{ fontSize: '32px', fontWeight: 900, color: '#ffffff', marginTop: '6px' }}>
-                ${formatPrice(totalPrice)}
-              </div>
+              <strong>${formatPrice(totalPrice)}</strong>
             </div>
 
-            {/* Кнопка оплаты */}
             <button
               type="button"
               disabled={selectedSeatIds.size === 0 || submitting}
               onClick={handleBooking}
-              style={{
-                width: '100%',
-                padding: '15px',
-                borderRadius: '14px',
-                background:
-                  selectedSeatIds.size === 0 || submitting
-                    ? '#334155'
-                    : 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
-                color: '#ffffff',
-                border: 'none',
-                fontSize: '15px',
-                fontWeight: 800,
-                cursor: selectedSeatIds.size === 0 || submitting ? 'not-allowed' : 'pointer',
-                boxShadow:
-                  selectedSeatIds.size === 0 || submitting
-                    ? 'none'
-                    : '0 8px 24px rgba(99, 102, 241, 0.45)',
-                transition: 'all 0.2s ease',
-              }}
+              className="booking-pay-button"
             >
               {submitting ? t('Оплата...') : `${t('Оплатить')} →`}
             </button>
           </aside>
         </div>
       </div>
-    </div>
+    </main>
   );
 };

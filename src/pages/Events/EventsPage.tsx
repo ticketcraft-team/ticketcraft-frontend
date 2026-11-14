@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { getPublicEvents } from '../../api/events';
 import { useLanguage } from '../../hooks/useLanguage';
+import { EventHeader } from './EventHeader';
 
 type DurationFilter = 'all' | 'short' | 'medium' | 'long';
 
@@ -39,6 +40,7 @@ export const EventsPage: React.FC = () => {
   return (
     <div className="events-page">
       <div className="events-container">
+        <EventHeader />
         {/* Заголовок и строка поиска */}
         <div className="events-heading">
           <div className="events-copy">

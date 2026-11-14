@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPublicEventById, getEventSessions, type EventDetails } from '../../api/events';
 import { useLanguage } from '../../hooks/useLanguage';
+import { EventHeader } from './EventHeader';
 
 export const EventDetailPage: React.FC = () => {
   const { t, language } = useLanguage();
@@ -29,17 +30,21 @@ export const EventDetailPage: React.FC = () => {
 
   if (loading || !event) {
     return (
-      <div className="event-detail-page">
-        <div className="event-detail-loading">
-          <span className="event-detail-spinner" aria-hidden="true" />
-          <p>{t('Загрузка...')}</p>
+      <main className="event-detail-page">
+        <EventHeader />
+        <div className="event-detail-container">
+          <div className="event-detail-loading">
+            <span className="event-detail-spinner" aria-hidden="true" />
+            <p>{t('Загрузка...')}</p>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
     <main className="event-detail-page">
+      <EventHeader />
       <div className="event-detail-container">
         <section className="event-detail-hero" aria-labelledby="event-detail-title">
           <div className="event-detail-poster-frame">
